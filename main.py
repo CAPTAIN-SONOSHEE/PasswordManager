@@ -2,7 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 from random import choice, randint, shuffle
 import pyperclip
-# ---------------------------- PASSWORD GENERATOR ------------------------------- #
+import json
 
 def password_generator():
 
@@ -21,26 +21,51 @@ def password_generator():
     entry_password.insert(0, password)
     pyperclip.copy(password)
 
-# ---------------------------- SAVE PASSWORD ------------------------------- #
 def save():
     website = entry_website.get()
     username = entry_username.get()
     password = entry_password.get()
+
+    new_data = {
+         website:{
+              "username": username,
+              "password": password, 
+         }
+    }
     
     if len(website) == 0 or len(username) == 0 or len(password) == 0 :
         messagebox.showwarning(title="Missing info", message="Please don't leave any fields empty!")
     else:
-        is_ok = messagebox.askokcancel(title=website, message=f"These are the details entered: \nEmail/Username: {username}\nPassword: {password}\nIs it ok to save?")
+            try:
+                 with open("data.json", mode="r") as data_file:
+                    data = json.load(data_file)
+                    data.update(new_data)
+            except FileNotFoundError:    
+                with open("data.json", mode="w") as data_file:
+                    json.dump(new_data, data_file, indent=4)
+            else:
+                 with open("data.json", mode="w") as data_file:
+                     json.dump(data, data_file, indent=4)    
+            finally:
+                entry_website.delete(0,'end')
+                entry_username.delete(0,'end')
+                entry_password.delete(0,'end')     
 
-        if is_ok:
-            with open("data.txt", mode="a") as data:
-                data.write(f"{website} | {username} | {password}\n")
+def find_password():
+    try:
+        with open("data.json", mode="r") as data_file:
+            data = json.load(data_file)
+    except FileNotFoundError:
+        messagebox.showwarning(title="No data", message="No Data File Found")
+    else:    
+        website = entry_website.get()
+        with open("data.json", mode="r") as data_file:
+            data = json.load(data_file)
+            if website in data:
+                messagebox.showinfo(title=website, message=f"Username: {data[website]['username']}\nPassword: {data[website]['password']}")
+            else:
+                messagebox.showinfo(title="No details", message=f"No details for {website} exists")
 
-            entry_website.delete(0,'end')
-            entry_username.delete(0,'end')
-            entry_password.delete(0,'end')     
-
-# ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
 window.title("Password Manager")
 window.config(padx=50, pady=50)
@@ -52,24 +77,26 @@ canvas.grid(column=1, row=0)
 
 label_website = Label(text="Website:")
 label_website.grid(column=0,row=1)
+label_username = Label(text="Email/Username:")
+label_username.grid(column=0,row=2)
+label_password = Label(text="Password:")
+label_password.grid(column=0,row=3)
+
+
 entry_website = Entry()
 entry_website.grid(column=1,row=1, columnspan=2, sticky="EW")
 entry_website.focus()
-
-label_username = Label(text="Email/Username:")
-label_username.grid(column=0,row=2)
 entry_username = Entry()
 entry_username.grid(column=1,row=2, columnspan=2, sticky="EW")
-
-label_password = Label(text="Password:")
-label_password.grid(column=0,row=3)
 entry_password = Entry()
 entry_password.grid(column=1,row=3, sticky="EW")
+
+
+button_search = Button(text="Search", command=find_password)
+button_search.grid(column=2, row=1, sticky="EW")
 button_password = Button(text="Generate Password", command=password_generator)
 button_password.grid(column=2,row=3, sticky="EW")
-
 button_add = Button(text="Add", width=36, command=save)
 button_add.grid(column=1,row=4,columnspan=2, sticky="EW")
-
 
 window.mainloop()
